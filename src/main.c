@@ -1,13 +1,19 @@
 #include <stdio.h>
 #include "../include/state_machine.h"
+#include "../include/actuator.h"
 
-//문자열 배열은 pointer를 쓰는구나
-//값 수정 안시킬거니까 const 붙임
+Actuator actuator = {0, MOTOR_OFF};
+
 const char * state_buf[] = {
     "STATE_STOP",
     "STATE_RUNNING",
     "STATE_ERROR",
     "STATE_RECOVERY"
+};
+
+const char * motor_buf[] = {
+    "MOTOR_OFF",
+    "MOTOR_ON"
 };
 
 
@@ -16,27 +22,47 @@ void stateHandler(State current_state)
     switch (current_state)
     {
     case STATE_STOP:
-        printf("[LOG] current state: %s\n", state_buf[current_state]);  
-        printf("PWM을 0으로 설정\n");
-        printf("모터 정지\n");
+        printf("[LOG] current state: %s\n", state_buf[current_state]);
+
+        actuator.pwm = 0;
+        printf("\tpwm : %d\n", actuator.pwm);
+
+        actuator.motor = MOTOR_OFF;
+        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
         break;
     
     case STATE_RUNNING:
         printf("[LOG] current state: %s\n", state_buf[current_state]);  
-        printf("PWM ON\n"); 
-        printf("모터 구동\n");
+
+        actuator.pwm = 70;
+        printf("\tpwm : %d\n", actuator.pwm);
+
+        actuator.motor = MOTOR_ON;
+        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
         break;
 
     case STATE_ERROR:
         printf("[LOG] current state: %s\n", state_buf[current_state]);  
-        printf("PWM을 0으로 설정\n");
-        printf("오류 원인 확인중...\n");
-        printf("오류 원인 확인\n");
+
+        actuator.pwm = 0;
+        printf("\tpwm : %d\n", actuator.pwm);
+
+        actuator.motor = MOTOR_OFF;
+        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
+
+        printf("\t오류 원인 확인중...\n");
+        printf("\t오류 원인 확인\n");
         break;
     
     case STATE_RECOVERY:
         printf("[LOG] current state: %s\n", state_buf[current_state]);  
-        printf("오류 복구 시작\n");
+
+        actuator.pwm = 0;
+        printf("\tpwm : %d\n", actuator.pwm);
+
+        actuator.motor = MOTOR_OFF;
+        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
+        printf("\t오류 복구 시작\n");
         break;
     }
 }
@@ -44,16 +70,6 @@ void stateHandler(State current_state)
 
 int main(void)
 {
-
-    /*
-    EVENT_RUN, 
-    EVENT_STOP, 
-    EVENT_FAULT, 
-    EVENT_RECOVER, 
-    EVENT_RECOVERY_OK, 
-    EVENT_RECOVERY_FAIL
-    */
-
     State current_state = STATE_STOP;
 
     current_state = getNextState(current_state, EVENT_RUN);
