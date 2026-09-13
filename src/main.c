@@ -1,8 +1,29 @@
 #include <stdio.h>
+#include <string.h>
 #include "../include/state_machine.h"
 #include "../include/actuator.h"
 
 Actuator actuator = {0, MOTOR_OFF};
+
+typedef enum
+{
+    CMD_MOVE,
+    CMD_STOP
+} CommandType;
+
+typedef enum
+{
+    DIR_FORWARD,
+    DIR_BACKWARD
+} Direction;
+
+typedef struct 
+{
+    CommandType type;
+    int speed;
+    Direction direction;
+} Command;
+
 
 const char * state_buf[] = {
     "STATE_STOP",
@@ -70,19 +91,73 @@ void stateHandler(State current_state)
 
 int main(void)
 {
+
     State current_state = STATE_STOP;
+    Event current_event;
 
-    current_state = getNextState(current_state, EVENT_RUN);
-    stateHandler(current_state);
+    Command cmd;
 
-    current_state = getNextState(current_state, EVENT_FAULT);
-    stateHandler(current_state);
+    char command_buf[20];
+    char direction_buf[20];
 
-    current_state = getNextState(current_state, EVENT_RECOVER);
-    stateHandler(current_state);
+    while(1)
+    {
+        printf("Command(MOVE/STOP): ");
+        scanf("%s", command_buf);
 
-    current_state = getNextState(current_state, EVENT_RECOVERY_OK);
-    stateHandler(current_state);
+        if(strcmp(command_buf, "MOVE") == 0)
+        {
+            cmd.type = CMD_MOVE;
+
+            printf("Speed(0~100): ");
+            scanf("%d", &cmd.speed);
+
+            printf("Dirction(FORWARD/BACKWARD): ");
+            scanf("%s", direction_buf);
+            if(strcmp(direction_buf, "FORWARD") == 0)
+            {   
+                cmd.direction = DIR_FORWARD;
+            }
+
+            else if (strcmp(direction_buf, "BACKWARD") == 0)
+            {
+                cmd.direction = DIR_BACKWARD;
+            }
+
+            else 
+            {
+                printf("[ERROR] Invalid Direction\n");
+                continue;
+            }
+
+            current_event = EVENT_RUN;
+            current_state = getNextState(current_state, current_event);
+
+            printf("[LOG] Command: %s\n", command_buf);
+            printf("[LOG] Speed: %d\n", cmd.speed);
+            printf("[LOG] direction: %s\n", direction_buf);
+
+            stateHandler(current_state);
+        }
+
+        else if(strcmp(command_buf, "STOP") == 0)
+        {
+            cmd.type = CMD_STOP;
+
+            current_event = EVENT_STOP;
+            current_state = getNextState(current_state, current_event);
+
+            cmd.speed = 0;  
+
+            printf("[LOG] Command: %s\n", command_buf);
+            printf("[LOG] Speed: %d\n", cmd.speed);
+
+            stateHandler(current_state);
+        }
+
+        else 
+            printf("[ERROR] Invalid Command\n");
+        }
 
     return 0;
 }
