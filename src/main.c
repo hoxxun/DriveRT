@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h> //atoi 
 #include "../include/state_machine.h"
 #include "../include/actuator.h"
 
@@ -18,6 +19,10 @@ typedef struct
     Direction direction;
 } Command;
 
+const char * commandType_str[] = {
+    "MOVE",
+    "STOP"
+};
 
 const char * state_str[] = {
     "STATE_STOP",
@@ -26,14 +31,15 @@ const char * state_str[] = {
     "STATE_RECOVERY"
 };
 
+
 const char * motor_str[] = {
     "MOTOR_OFF",
     "MOTOR_ON"
 };
 
 const char * direction_str[] = {
-    "DIR_FORWARD",
-    "DIR_BACKWARD"
+    "FORWARD",
+    "BACKWARD"
 };
 
 
@@ -152,6 +158,50 @@ int commandInput(Command * cmd)
     } 
 }
 
+void buildCommandMessage(Command cmd, char * buf)
+{
+    if(cmd.type == CMD_MOVE)
+    {
+        snprintf(buf, 50, "%s,%d,%s",
+        commandType_str[cmd.type],
+        cmd.speed,
+        direction_str[cmd.direction]); 
+    }
+    else if (cmd.type == CMD_STOP)
+    {
+        snprintf(buf,50,"%s",
+                commandType_str[cmd.type]);
+    }
+}
+
+
+void parseCommandMessage(char * buf, Command * cmd)
+{
+    char * cmdType = strtok(buf, ",");
+    char * cmdSpeed = strtok(NULL, ",");
+    char * cmdDirection = strtok(NULL, ",");
+
+    if(strcmp(cmdType, "MOVE")==0)
+    {
+        cmd->type = CMD_MOVE;
+        cmd->speed = atoi(cmdSpeed);
+        if(strcmp(cmdDirection,"FORWARD")==0)
+        {   
+            cmd->direction = DIR_FORWARD;
+        }
+        else if(strcmp(cmdDirection,"BACKWARD")==0)
+        {
+            cmd->direction = DIR_BACKWARD;
+        }
+    }
+    else if(strcmp(cmdType, "STOP")==0)
+    {
+        cmd->type = CMD_STOP;
+        cmd->speed = 0;
+    }
+}
+
+
 int main(void)
 {
 
@@ -179,7 +229,23 @@ int main(void)
             continue;
 
         stateHandler(current_state, cmd);
+
+
+        char buf[50];
+
+        buildCommandMessage(cmd, buf);
+        printf("%s\n", buf);
+
+        parseCommandMessage(buf,&cmd);
+        printf("%s\n",commandType_str[cmd.type]);
+        printf("%d\n", cmd.speed);
+        printf("%s\n", direction_str[cmd.direction]);
+
+
+
     }
+
+
 
     return 0;
 }
