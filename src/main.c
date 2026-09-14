@@ -3,19 +3,13 @@
 #include "../include/state_machine.h"
 #include "../include/actuator.h"
 
-Actuator actuator = {0, MOTOR_OFF};
+Actuator actuator = {0, MOTOR_OFF, DIR_FORWARD};
 
 typedef enum
 {
     CMD_MOVE,
     CMD_STOP
 } CommandType;
-
-typedef enum
-{
-    DIR_FORWARD,
-    DIR_BACKWARD
-} Direction;
 
 typedef struct 
 {
@@ -25,65 +19,82 @@ typedef struct
 } Command;
 
 
-const char * state_buf[] = {
+const char * state_str[] = {
     "STATE_STOP",
     "STATE_RUNNING",
     "STATE_ERROR",
     "STATE_RECOVERY"
 };
 
-const char * motor_buf[] = {
+const char * motor_str[] = {
     "MOTOR_OFF",
     "MOTOR_ON"
 };
 
+const char * direction_str[] = {
+    "DIR_FORWARD",
+    "DIR_BACKWARD"
+};
 
-void stateHandler(State current_state)
+
+void stateHandler(State current_state, Command cmd)
 {
     switch (current_state)
     {
     case STATE_STOP:
-        printf("[LOG] current state: %s\n", state_buf[current_state]);
+        printf("[LOG] current state: %s\n", state_str[current_state]);
 
         actuator.pwm = 0;
         printf("\tpwm : %d\n", actuator.pwm);
 
         actuator.motor = MOTOR_OFF;
-        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
+        printf("\tmotor : %s\n", motor_str[actuator.motor]);
+
+        printf("\tdirection : %s\n", direction_str[actuator.direction]);
+
         break;
     
     case STATE_RUNNING:
-        printf("[LOG] current state: %s\n", state_buf[current_state]);  
+        printf("[LOG] current state: %s\n", state_str[current_state]);  
 
-        actuator.pwm = 70;
+        actuator.pwm = cmd.speed;
         printf("\tpwm : %d\n", actuator.pwm);
 
         actuator.motor = MOTOR_ON;
-        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
+        printf("\tmotor : %s\n", motor_str[actuator.motor]);
+
+        actuator.direction = cmd.direction;
+        printf("\tdirection : %s\n", direction_str[actuator.direction]);
         break;
 
     case STATE_ERROR:
-        printf("[LOG] current state: %s\n", state_buf[current_state]);  
+        printf("[LOG] current state: %s\n", state_str[current_state]);  
 
         actuator.pwm = 0;
         printf("\tpwm : %d\n", actuator.pwm);
 
         actuator.motor = MOTOR_OFF;
-        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
+        printf("\tmotor : %s\n", motor_str[actuator.motor]);
+
+        printf("\tdirection : %s\n", direction_str[actuator.direction]);
 
         printf("\t오류 원인 확인중...\n");
         printf("\t오류 원인 확인\n");
         break;
     
     case STATE_RECOVERY:
-        printf("[LOG] current state: %s\n", state_buf[current_state]);  
+        printf("[LOG] current state: %s\n", state_str[current_state]);  
 
         actuator.pwm = 0;
         printf("\tpwm : %d\n", actuator.pwm);
 
         actuator.motor = MOTOR_OFF;
-        printf("\tmotor : %s\n", motor_buf[actuator.motor]);
+        printf("\tmotor : %s\n", motor_str[actuator.motor]);
+
+        printf("\tdirection : %s\n", direction_str[actuator.direction]);
+
         printf("\t오류 복구 시작\n");
+
         break;
     }
 }
@@ -137,7 +148,7 @@ int main(void)
             printf("[LOG] Speed: %d\n", cmd.speed);
             printf("[LOG] direction: %s\n", direction_buf);
 
-            stateHandler(current_state);
+            stateHandler(current_state, cmd);
         }
 
         else if(strcmp(command_buf, "STOP") == 0)
@@ -152,7 +163,7 @@ int main(void)
             printf("[LOG] Command: %s\n", command_buf);
             printf("[LOG] Speed: %d\n", cmd.speed);
 
-            stateHandler(current_state);
+            stateHandler(current_state, cmd);
         }
 
         else 
