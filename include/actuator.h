@@ -1,14 +1,13 @@
+#ifndef ACTUATOR_H
+#define ACTUATOR_H
+
+#include "command.h"
+
 typedef enum 
 {
     MOTOR_OFF, 
     MOTOR_ON
 } Motor;
-
-typedef enum
-{
-    DIR_FORWARD,
-    DIR_BACKWARD
-} Direction;
 
 typedef struct 
 {
@@ -16,3 +15,5 @@ typedef struct
     Motor motor;
     Direction direction;
 } Actuator;
+
+#endif

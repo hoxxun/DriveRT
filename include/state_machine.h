@@ -1,3 +1,6 @@
+#ifndef STATE_MACHINE_H
+#define STATE_MACHINE_H
+
 typedef enum
 {
     STATE_STOP, 
@@ -18,3 +21,4 @@ typedef enum
 
 
 State getNextState(State current_state, Event current_event);
+#endif
