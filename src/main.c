@@ -6,6 +6,9 @@
 #include "../include/ap.h"
 #include "../include/mcu.h"
 
+#define SUCCESS 1
+#define FAIL -1
+
 void send_receive_CommandMessage(char * tx_buf, char * rx_buf)
 {
     printf("[AP] Command Message 송신\n");
@@ -18,11 +21,31 @@ void send_receive_CommandMessage(char * tx_buf, char * rx_buf)
     printf("RX: %s\n", rx_buf);
 }
 
+int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_state)
+{
+    //MCU에서 CommandMessgae 파싱 후 mcu_cmd 구조체 초기화
+    parseCommandMessage(rx_buf, mcu_cmd);
+
+    //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
+    if (mcu_cmd->type == CMD_MOVE)
+    {
+        *current_state = getNextState(*current_state, EVENT_RUN);
+    }
+    else if (mcu_cmd->type == CMD_STOP)
+    {
+        *current_state = getNextState(*current_state, EVENT_STOP);
+    }
+    else    
+        return FAIL;
+
+    //MCU가 Actuator의 상태를 변환
+    updateActuator(*current_state, *mcu_cmd);
+    return SUCCESS;
+}
+
 int main(void)
 {
-
     State current_state = STATE_STOP; //MCU
-    Event current_event; //MCU
 
     Command ap_cmd;
     Command mcu_cmd;
@@ -32,36 +55,21 @@ int main(void)
 
     while(1)
     {
-        //AP에서 명령어 입력
+        //AP에서 명령어 입력 후 ap_cmd 구조체 초기화
         int result = commandInput(&ap_cmd);
 
         if(result == -1) continue;
 
-        //AP에서 CommandMessgae 생성
+        //AP에서 ap_cmd 구조체를 보고 CommandMessgae 생성
         buildCommandMessage(ap_cmd, tx_buf);
 
         //AP에서 CommandMessgae 보내고, MCU에서 받음
         send_receive_CommandMessage(tx_buf, rx_buf);
 
-        //MCU에서 CommandMessgae 파싱
-        parseCommandMessage(rx_buf, &mcu_cmd);
+        int mcu_result = processCommandMessage(rx_buf, &mcu_cmd, &current_state);
 
-        //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
-        if (mcu_cmd.type == CMD_MOVE)
-        {
-            current_event = EVENT_RUN;
-            current_state = getNextState(current_state, current_event);
-        }
-        else if (mcu_cmd.type == CMD_STOP)
-        {
-            current_event = EVENT_STOP;
-            current_state = getNextState(current_state, current_event);
-        }
-        else    
-            continue;
-
-        //MCU가 Actuator의 상태를 변환
-        updateActuator(current_state, mcu_cmd);
+        if (mcu_result == FAIL) continue;
+        
     }
     return 0;
 }
