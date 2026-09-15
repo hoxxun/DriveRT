@@ -5,25 +5,46 @@
 #include "../include/state_machine.h"
 #include "../include/actuator.h"
 #include "../include/mcu.h"
+#include "../include/common.h"
 
 Actuator actuator = {0, MOTOR_OFF, DIR_FORWARD};
 
-void parseCommandMessage(char * buf, Command * cmd)
+int parseCommandMessage(char * buf, Command * cmd)
 {
     char * cmdType = strtok(buf, ",");
-    char * cmdSpeed = strtok(NULL, ",");
-    char * cmdDirection = strtok(NULL, ",");
+    if(cmdType == NULL)
+        return FAIL;
 
     if(strcmp(cmdType, "MOVE")==0)
     {
+        char * cmdSpeed = strtok(NULL, ",");
+        if(cmdSpeed == NULL) 
+            return FAIL;
+
+        char * cmdDirection = strtok(NULL, ",");
+        if(cmdDirection ==  NULL)
+            return FAIL;
+
         cmd->type = CMD_MOVE;
-        cmd->speed = atoi(cmdSpeed);
+
+
+        char * end;
+        long speed = strtol(cmdSpeed, &end, 10);
+        if(end == cmdSpeed)
+            return FAIL;
+        if(*end != '\0')
+            return FAIL;
+        cmd->speed = speed;
+
+
         if(strcmp(cmdDirection,"FORWARD")==0)
         {   
             cmd->direction = DIR_FORWARD;
             printf("\n");
             printf("[MCU] Command Message 파싱\n");
             printf("\n");
+
+            return SUCCESS;
         }
         else if(strcmp(cmdDirection,"BACKWARD")==0)
         {
@@ -31,8 +52,13 @@ void parseCommandMessage(char * buf, Command * cmd)
             printf("\n");
             printf("[MCU] Command Message 파싱\n");
             printf("\n");
+
+            return SUCCESS;
         }
+        else    
+            return FAIL;
     }
+
     else if(strcmp(cmdType, "STOP")==0)
     {
         cmd->type = CMD_STOP;
@@ -40,7 +66,13 @@ void parseCommandMessage(char * buf, Command * cmd)
         printf("\n");
         printf("[MCU] Command Message 파싱\n");
         printf("\n");
+
+        return SUCCESS;
     }
+
+    else 
+        return FAIL;
+    
 }
 
 void updateActuator(State current_state, Command cmd)

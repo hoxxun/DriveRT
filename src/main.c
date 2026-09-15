@@ -5,9 +5,7 @@
 #include "../include/actuator.h"
 #include "../include/ap.h"
 #include "../include/mcu.h"
-
-#define SUCCESS 1
-#define FAIL -1
+#include "../include/common.h"
 
 void send_receive_CommandMessage(char * tx_buf, char * rx_buf)
 {
@@ -24,7 +22,9 @@ void send_receive_CommandMessage(char * tx_buf, char * rx_buf)
 int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_state)
 {
     //MCU에서 CommandMessgae 파싱 후 mcu_cmd 구조체 초기화
-    parseCommandMessage(rx_buf, mcu_cmd);
+    int result = parseCommandMessage(rx_buf, mcu_cmd);
+    if(result == FAIL)
+        return FAIL;
 
     //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
     if (mcu_cmd->type == CMD_MOVE)
@@ -56,9 +56,9 @@ int main(void)
     while(1)
     {
         //AP에서 명령어 입력 후 ap_cmd 구조체 초기화
-        int result = commandInput(&ap_cmd);
+        int result1 = commandInput(&ap_cmd);
 
-        if(result == -1) continue;
+        if(result1 == -1) continue;
 
         //AP에서 ap_cmd 구조체를 보고 CommandMessgae 생성
         buildCommandMessage(ap_cmd, tx_buf);
@@ -66,9 +66,9 @@ int main(void)
         //AP에서 CommandMessgae 보내고, MCU에서 받음
         send_receive_CommandMessage(tx_buf, rx_buf);
 
-        int mcu_result = processCommandMessage(rx_buf, &mcu_cmd, &current_state);
+        int result = processCommandMessage(rx_buf, &mcu_cmd, &current_state);
 
-        if (mcu_result == FAIL) continue;
+        if (result == FAIL) continue;
         
     }
     return 0;

@@ -4,5 +4,5 @@
 
 extern Actuator actuator;
 
-void parseCommandMessage(char * buf, Command * cmd);
+int parseCommandMessage(char * buf, Command * cmd);
 void updateActuator(State current_state, Command cmd);
