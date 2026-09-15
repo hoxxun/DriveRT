@@ -59,9 +59,9 @@ int commandInput(Command * cmd)
 
 void buildCommandMessage(Command cmd, char * buf)
 {
-    if(cmd.type == CMD_MOVE)
+    if (cmd.type == CMD_MOVE)
     {
-        printf("[AP] Command Message 생성: ");
+        printf("[AP] Command Message 생성\n");
         snprintf(buf, 50, "%s,%d,%s",
                 commandType_str[cmd.type],
                 cmd.speed,
@@ -69,7 +69,7 @@ void buildCommandMessage(Command cmd, char * buf)
     }
     else if (cmd.type == CMD_STOP)
     {
-        printf("[AP] Command Message 생성: ");
+        printf("[AP] Command Message 생성\n");
         snprintf(buf,50,"%s",
                 commandType_str[cmd.type]);
     }
