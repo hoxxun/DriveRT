@@ -1,3 +1,5 @@
+//STM32로 가져갈 것
+
 #ifndef STATE_MACHINE_H
 #define STATE_MACHINE_H
 

@@ -1,5 +1,11 @@
-#include "../common/include/command.h"
+//STM32로 가져갈 것
+
+#ifndef MCU_H
+#define MCU_H
+
+#include "../../common/include/command.h"
 #include "state_machine.h"
+#include "actuator.h"
 #include <time.h>
 
 extern Actuator actuator;
@@ -12,3 +18,4 @@ typedef struct
 {
     time_t last_heartbeat_time;
 } Heartbeat;
+#endif

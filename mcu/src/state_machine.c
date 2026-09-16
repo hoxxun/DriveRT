@@ -1,4 +1,7 @@
-#include "../../include/state_machine.h"
+//STM32로 가져가는데 44번째 줄 printf는 수정 필요
+
+#include <stdio.h>
+#include "../include/state_machine.h"
 
 State getNextState(State current_state, Event current_event)
 {

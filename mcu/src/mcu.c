@@ -1,10 +1,14 @@
+//전체적으로 MCU 코드여서 STM32로 가져감
+//근데 LOG를 찍는 (printf) 같은 건 수정을 해야 될 듯
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 #include "../../common/include/command.h"
-#include "../../include/state_machine.h"
-#include "../../include/actuator.h"
+#include "../include/state_machine.h"
+#include "../include/actuator.h"
 
 #define SUCCESS 1
 #define FAIL -1
@@ -34,32 +38,6 @@ static const char * direction_str[] = {
 
 void receive_commandMessage();
 int receive_heartbeat();
-
-int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_state)
-{
-    int heartbeat_timeout = 5;
-
-    //MCU에서 CommandMessgae 파싱 후 mcu_cmd 구조체 초기화
-    int result = parseCommandMessage(rx_buf, mcu_cmd);
-    if(result == FAIL)
-        return FAIL;
-
-    //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
-    if (mcu_cmd->type == CMD_MOVE)
-    {
-        *current_state = getNextState(*current_state, EVENT_RUN);
-    }
-    else if (mcu_cmd->type == CMD_STOP)
-    {
-        *current_state = getNextState(*current_state, EVENT_STOP);
-    }
-    else    
-        return FAIL;
-
-    //MCU가 Actuator의 상태를 변환
-    updateActuator(*current_state, *mcu_cmd);
-    return SUCCESS;
-}
 
 int parseCommandMessage(char * buf, Command * cmd)
 {
@@ -194,4 +172,32 @@ void updateActuator(State current_state, Command cmd)
         break;
     }
 }
+
+int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_state)
+{
+    int heartbeat_timeout = 5;
+
+    //MCU에서 CommandMessgae 파싱 후 mcu_cmd 구조체 초기화
+    int result = parseCommandMessage(rx_buf, mcu_cmd);
+    if(result == FAIL)
+        return FAIL;
+
+    //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
+    if (mcu_cmd->type == CMD_MOVE)
+    {
+        *current_state = getNextState(*current_state, EVENT_RUN);
+    }
+    else if (mcu_cmd->type == CMD_STOP)
+    {
+        *current_state = getNextState(*current_state, EVENT_STOP);
+    }
+    else    
+        return FAIL;
+
+    //MCU가 Actuator의 상태를 변환
+    updateActuator(*current_state, *mcu_cmd);
+    return SUCCESS;
+}
+
+
 

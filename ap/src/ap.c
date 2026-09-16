@@ -1,4 +1,8 @@
+#include <stdio.h>
+#include <string.h>
 #include "../../common/include/command.h"
+
+//PC에 남길 것
 
 void send_commandMessage();
 int send_heartbeat();
