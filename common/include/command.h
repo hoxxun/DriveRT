@@ -1,17 +1,3 @@
-#ifndef COMMAND_H
-#define COMMAND_H
-
-
-
-/*
-extern const char * state_str[];
-extern const char * motor_str[];
-
-로그용이여서 포함 안시킬거임
-*/
-
-
-/*
 typedef enum
 {
     DIR_FORWARD,
@@ -30,7 +16,3 @@ typedef struct
     int speed;
     Direction direction;
 } Command;
-
-*/
-#endif
-

@@ -1,10 +1,17 @@
-#include <stdio.h>
-#include <string.h>
-#include "../include/ap.h"
+#include "../../common/include/command.h"
 
-/*
 void send_commandMessage();
 int send_heartbeat();
+
+static const char * commandType_str[] = {
+    "MOVE",
+    "STOP"
+};
+
+static const char * direction_str[] = {
+    "FORWARD",
+    "BACKWARD"
+};
 
 int commandInput(Command * cmd)
 {
@@ -78,4 +85,3 @@ void buildCommandMessage(Command cmd, char * buf)
                 commandType_str[cmd.type]);
     }
 }
-*/

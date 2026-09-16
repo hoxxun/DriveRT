@@ -1,15 +1,65 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include "../include/command.h"
-#include "../include/state_machine.h"
-#include "../include/actuator.h"
-#include "../include/mcu.h"
-#include "../include/common.h"
 
-/*
+
+#include "../../common/include/command.h"
+#include "../../include/state_machine.h"
+#include "../../include/actuator.h"
+
+#define SUCCESS 1
+#define FAIL -1
+
+Actuator actuator = {0, MOTOR_OFF};
+
+
+//LOG
+static const char * state_str[] = {
+    "STATE_STOP",
+    "STATE_RUNNING",
+    "STATE_ERROR",
+    "STATE_RECOVERY"
+};
+
+//LOG
+static const char * motor_str[] = {
+    "MOTOR_OFF",
+    "MOTOR_ON"
+};
+
+//LOG
+static const char * direction_str[] = {
+    "FORWARD",
+    "BACKWARD"
+};
+
 void receive_commandMessage();
- int receive_heartbeat();
+int receive_heartbeat();
+
+int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_state)
+{
+    int heartbeat_timeout = 5;
+
+    //MCU에서 CommandMessgae 파싱 후 mcu_cmd 구조체 초기화
+    int result = parseCommandMessage(rx_buf, mcu_cmd);
+    if(result == FAIL)
+        return FAIL;
+
+    //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
+    if (mcu_cmd->type == CMD_MOVE)
+    {
+        *current_state = getNextState(*current_state, EVENT_RUN);
+    }
+    else if (mcu_cmd->type == CMD_STOP)
+    {
+        *current_state = getNextState(*current_state, EVENT_STOP);
+    }
+    else    
+        return FAIL;
+
+    //MCU가 Actuator의 상태를 변환
+    updateActuator(*current_state, *mcu_cmd);
+    return SUCCESS;
+}
 
 int parseCommandMessage(char * buf, Command * cmd)
 {
@@ -145,30 +195,3 @@ void updateActuator(State current_state, Command cmd)
     }
 }
 
-int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_state)
-{
-    int heartbeat_timeout = 5;
-
-
-    //MCU에서 CommandMessgae 파싱 후 mcu_cmd 구조체 초기화
-    int result = parseCommandMessage(rx_buf, mcu_cmd);
-    if(result == FAIL)
-        return FAIL;
-
-    //MCU가 Command 기준으로 Event 결정 및 StateMachine 상태 변환
-    if (mcu_cmd->type == CMD_MOVE)
-    {
-        *current_state = getNextState(*current_state, EVENT_RUN);
-    }
-    else if (mcu_cmd->type == CMD_STOP)
-    {
-        *current_state = getNextState(*current_state, EVENT_STOP);
-    }
-    else    
-        return FAIL;
-
-    //MCU가 Actuator의 상태를 변환
-    updateActuator(*current_state, *mcu_cmd);
-    return SUCCESS;
-}
-*/

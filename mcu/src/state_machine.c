@@ -1,7 +1,5 @@
-#include <stdio.h>
-#include "../include/state_machine.h"
+#include "../../include/state_machine.h"
 
-/*
 State getNextState(State current_state, Event current_event)
 {
     switch(current_state)
@@ -39,10 +37,9 @@ State getNextState(State current_state, Event current_event)
         
         return current_state;
 
-    //잘못된 state가 들어왔을 때
+
     default:
         printf("[LOG] invalid state\n");
         return current_state;
     }  
 }
-*/
