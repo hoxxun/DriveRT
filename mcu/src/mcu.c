@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "../../common/include/command.h"
+
 #include "../include/state_machine.h"
 #include "../include/actuator.h"
 
@@ -16,7 +16,7 @@
 Actuator actuator = {0, MOTOR_OFF};
 
 
-//LOG
+/* LOG */
 static const char * state_str[] = {
     "STATE_STOP",
     "STATE_RUNNING",
@@ -24,13 +24,13 @@ static const char * state_str[] = {
     "STATE_RECOVERY"
 };
 
-//LOG
+/* LOG */
 static const char * motor_str[] = {
     "MOTOR_OFF",
     "MOTOR_ON"
 };
 
-//LOG
+/* LOG */
 static const char * direction_str[] = {
     "FORWARD",
     "BACKWARD"
@@ -102,8 +102,8 @@ int parseCommandMessage(char * buf, Command * cmd)
 
     else 
         return FAIL;
-    
 }
+
 
 void updateActuator(State current_state, Command cmd)
 {
@@ -148,7 +148,7 @@ void updateActuator(State current_state, Command cmd)
         printf("\tmotor : %s\n", motor_str[actuator.motor]);
 
         printf("\tdirection : %s\n", direction_str[actuator.direction]);
-
+ 
         printf("\t오류 원인 확인중...\n");
         printf("\t오류 원인 확인\n");
 
@@ -194,10 +194,9 @@ int processCommandMessage(char * rx_buf, Command * mcu_cmd, State * current_stat
     else    
         return FAIL;
 
+    
+
     //MCU가 Actuator의 상태를 변환
     updateActuator(*current_state, *mcu_cmd);
     return SUCCESS;
 }
-
-
-
