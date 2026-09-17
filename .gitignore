@@ -1,1 +1,7 @@
 a.out
+
+# STM32CubeIDE build outputs and local workspace data
+mcu/DriveRT_MCU/Debug/
+mcu/DriveRT_MCU/Release/
+mcu/DriveRT_MCU/.metadata/
+mcu/DriveRT_MCU/*.launch
