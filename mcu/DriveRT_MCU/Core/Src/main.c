@@ -91,6 +91,8 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+      uint8_t str[] = {"Hello UART\r\n"};
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,10 +102,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
 	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 	  HAL_Delay(500);
 	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 	  HAL_Delay(500);
+
+	  HAL_UART_Transmit(&huart2, str,sizeof(str) - 1,1000);
+      HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
