@@ -91,7 +91,9 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-      uint8_t str[] = {"Hello UART\r\n"};
+      uint8_t rx_buf[1];
+      uint8_t str_buf[20];
+      int index = 0;
 
   /* USER CODE END 2 */
 
@@ -99,17 +101,40 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+/*     
+      HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	    HAL_Delay(500);
+	    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+	    HAL_Delay(500);
+ */
 
-	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-	  HAL_Delay(500);
-	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-	  HAL_Delay(500);
+    //문자를 하나 받는다. Enter면 문자열을 끝내고 송신한다. Enter가 아니면서 공간이 있으면 저장한다. 공간이 없으면 버린다.
+    HAL_UART_Receive(&huart2, rx_buf, sizeof(rx_buf), HAL_MAX_DELAY);
 
-	  HAL_UART_Transmit(&huart2, str,sizeof(str) - 1,1000);
-      HAL_Delay(1000);
+    if(rx_buf[0] == '\r')
+    {
+      str_buf[index] = '\0';
+      HAL_UART_Transmit(&huart2,str_buf, index, 1000);
+      index = 0;
+    }
+
+    else 
+    {
+      if(index < sizeof(str_buf)-1)
+      {
+        str_buf[index] = rx_buf[0];
+        index++;
+      }
+      else
+      {
+        //버퍼 full : 현재 수신 문자를 저장하지 않음
+      }
+    }
+
   }
   /* USER CODE END 3 */
 }
