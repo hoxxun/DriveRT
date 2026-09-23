@@ -8,6 +8,9 @@
 #include "actuator.h"
 #include <time.h>
 
+#define SUCCESS 1
+#define FAIL -1
+
 extern Actuator actuator;
 
 int parseCommandMessage(char * buf, Command * cmd);

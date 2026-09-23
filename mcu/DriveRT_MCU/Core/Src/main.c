@@ -17,12 +17,14 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 #include "command.h"
+#include "mcu.h"
 
 /* USER CODE END Includes */
 
@@ -94,8 +96,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
       uint8_t rx_buf[1];
-      uint8_t str_buf[20];
+      char str_buf[20];
       int index = 0;
+      Command cmd;
 
   /* USER CODE END 2 */
 
@@ -120,7 +123,18 @@ int main(void)
     if(rx_buf[0] == '\r')
     {
       str_buf[index] = '\0';
-      HAL_UART_Transmit(&huart2,str_buf, index, 1000);
+      HAL_UART_Transmit(&huart2,(uint8_t *) str_buf, index, 1000);
+      int result = parseCommandMessage(str_buf, &cmd);
+
+      if(result == SUCCESS)
+      {
+        HAL_UART_Transmit(&huart2, (uint8_t *)"Parse OK", sizeof("Parse OK") -1, 1000);
+      }
+      else
+      {
+        HAL_UART_Transmit(&huart2, (uint8_t *)"Parse Fail", sizeof("Parse Fail") -1, 1000);
+      }
+
       index = 0;
     }
 
@@ -217,7 +231,6 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**

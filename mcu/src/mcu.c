@@ -9,9 +9,8 @@
 
 #include "../include/state_machine.h"
 #include "../include/actuator.h"
+#include "../include/mcu.h"
 
-#define SUCCESS 1
-#define FAIL -1
 
 Actuator actuator = {0, MOTOR_OFF};
 
