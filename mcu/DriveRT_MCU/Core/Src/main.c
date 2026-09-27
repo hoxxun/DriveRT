@@ -23,8 +23,11 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <string.h>
+
 #include "command.h"
 #include "mcu.h"
+#include "state_machine.h"
 
 /* USER CODE END Includes */
 
@@ -95,10 +98,19 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-      uint8_t rx_buf[1];
-      char str_buf[20];
-      int index = 0;
-      Command cmd;
+    uint8_t rx_buf[1];
+    char str_buf[20];
+    int index = 0;
+    Command cmd;
+    State current_state = STATE_STOP;
+
+    /* LOG */
+    static const char * state_str[] = {
+      "STATE_STOP",
+      "STATE_RUNNING",
+      "STATE_ERROR",
+      "STATE_RECOVERY"
+    };
 
   /* USER CODE END 2 */
 
@@ -128,11 +140,26 @@ int main(void)
 
       if(result == SUCCESS)
       {
-        HAL_UART_Transmit(&huart2, (uint8_t *)"Parse OK", sizeof("Parse OK") -1, 1000);
+        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse OK ", sizeof("\r\nParse OK ") -1, 1000);
+
+        switch (cmd.type)
+        {
+        case CMD_MOVE:
+          current_state = getNextState(current_state, EVENT_RUN);
+          HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+          break;
+
+        case CMD_STOP:
+          current_state = getNextState(current_state, EVENT_STOP);
+          HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+          break;
+        }
       }
       else
       {
-        HAL_UART_Transmit(&huart2, (uint8_t *)"Parse Fail", sizeof("Parse Fail") -1, 1000);
+        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse Fail\r\n", sizeof("\r\nParse Fail\r\n") -1, 1000);
       }
 
       index = 0;
@@ -150,7 +177,6 @@ int main(void)
         //버퍼 full : 현재 수신 문자를 저장하지 않음
       }
     }
-
   }
   /* USER CODE END 3 */
 }
