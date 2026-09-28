@@ -23,11 +23,13 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdio.h>
 #include <string.h>
 
 #include "command.h"
 #include "mcu.h"
 #include "state_machine.h"
+#include "actuator.h"
 
 /* USER CODE END Includes */
 
@@ -101,6 +103,7 @@ int main(void)
     uint8_t rx_buf[1];
     char str_buf[20];
     int index = 0;
+
     Command cmd;
     State current_state = STATE_STOP;
 
@@ -111,6 +114,21 @@ int main(void)
       "STATE_ERROR",
       "STATE_RECOVERY"
     };
+
+    /* LOG */
+    static const char * motor_str[] = {
+      "MOTOR_OFF",
+      "MOTOR_ON"
+    };
+
+    /* LOG */
+    static const char * direction_str[] = {
+      "FORWARD",
+      "BACKWARD"
+    };
+
+    /* LOG */
+    char pwm_str[20];
 
   /* USER CODE END 2 */
 
@@ -146,16 +164,27 @@ int main(void)
         {
         case CMD_MOVE:
           current_state = getNextState(current_state, EVENT_RUN);
-          HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+          updateActuator(current_state, cmd);
           break;
 
         case CMD_STOP:
           current_state = getNextState(current_state, EVENT_STOP);
-          HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+          updateActuator(current_state, cmd);
           break;
         }
+
+         /*LOG*/
+          HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+          
+          snprintf(pwm_str, sizeof(pwm_str), "%d", actuator.pwm);
+          HAL_UART_Transmit(&huart2, (uint8_t *)pwm_str, strlen(pwm_str),1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)motor_str[actuator.motor], strlen(motor_str[actuator.motor]),1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)direction_str[actuator.direction], strlen(direction_str[actuator.direction]),1000);
+          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"), 1000);
+
       }
       else
       {
