@@ -68,8 +68,9 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartDefaultTask(void *argument);
 
-/* USER CODE BEGIN PFP */
 
+/* USER CODE BEGIN PFP */
+void transmitMessage(void *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -165,7 +166,7 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  osThreadNew(transmitMessage, NULL, NULL);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -374,7 +375,14 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void transmitMessage(void *argument)
+{
+  for(;;)
+  {
+    HAL_UART_Transmit(&huart2,(uint8_t *)"Task2 alive\r\n", strlen("Task2 alive\r\n"),1000);
+    osDelay(2000);
+  }
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
