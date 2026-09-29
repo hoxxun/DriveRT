@@ -71,6 +71,9 @@ void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 void transmitMessage(void *argument);
+
+void receiveMessage(void *argument);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -166,7 +169,11 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+
   osThreadNew(transmitMessage, NULL, NULL);
+
+  osThreadNew(receiveMessage, NULL, NULL);
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -375,6 +382,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 void transmitMessage(void *argument)
 {
   for(;;)
@@ -383,6 +391,44 @@ void transmitMessage(void *argument)
     osDelay(2000);
   }
 }
+
+void receiveMessage(void *argument)
+{
+  uint8_t rx_buf[1];
+  char str_buf[20];
+  int index = 0;
+
+  Command cmd;
+  State current_state = STATE_STOP;
+  
+  for(;;)
+  {
+    HAL_UART_Receive(&huart2, rx_buf, sizeof(rx_buf), HAL_MAX_DELAY);
+
+    if(rx_buf[0] == '\r')
+    {
+      str_buf[index] = '\0';
+      HAL_UART_Transmit(&huart2,(uint8_t *) str_buf, index, 1000);
+      int result = parseCommandMessage(str_buf, &cmd);
+
+      index = 0;
+    }
+    else 
+    {
+      if(index < sizeof(str_buf)-1)
+      {
+        str_buf[index] = rx_buf[0];
+        index++;
+      }
+      else
+      {
+        //버퍼 full : 현재 수신 문자를 저장하지 않음
+      }
+    }
+  }
+}
+
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
