@@ -58,7 +58,10 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+
 /* USER CODE BEGIN PV */
+
+osMessageQueueId_t commandQueue;
 
 /* USER CODE END PV */
 
@@ -70,9 +73,10 @@ void StartDefaultTask(void *argument);
 
 
 /* USER CODE BEGIN PFP */
-void transmitMessage(void *argument);
 
 void receiveMessage(void *argument);
+
+void changeState(void *argument);
 
 /* USER CODE END PFP */
 
@@ -161,7 +165,9 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+  
+  commandQueue = osMessageQueueNew(4, sizeof(Command), NULL);
+
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -170,9 +176,9 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
 
-  osThreadNew(transmitMessage, NULL, NULL);
-
   osThreadNew(receiveMessage, NULL, NULL);
+
+  osThreadNew(changeState, NULL, NULL);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -237,6 +243,7 @@ int main(void)
           HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
           HAL_UART_Transmit(&huart2, (uint8_t *)direction_str[actuator.direction], strlen(direction_str[actuator.direction]),1000);
           HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"), 1000);
+
 
       }
       else
@@ -383,15 +390,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void transmitMessage(void *argument)
-{
-  for(;;)
-  {
-    HAL_UART_Transmit(&huart2,(uint8_t *)"Task2 alive\r\n", strlen("Task2 alive\r\n"),1000);
-    osDelay(2000);
-  }
-}
-
 void receiveMessage(void *argument)
 {
   uint8_t rx_buf[1];
@@ -399,7 +397,6 @@ void receiveMessage(void *argument)
   int index = 0;
 
   Command cmd;
-  State current_state = STATE_STOP;
   
   for(;;)
   {
@@ -408,9 +405,30 @@ void receiveMessage(void *argument)
     if(rx_buf[0] == '\r')
     {
       str_buf[index] = '\0';
+      HAL_UART_Transmit(&huart2,(uint8_t *) "[commTask LOG]\r\n", strlen("[commTask LOG]\r\n"), 1000);
       HAL_UART_Transmit(&huart2,(uint8_t *) str_buf, index, 1000);
       int result = parseCommandMessage(str_buf, &cmd);
 
+      if(result == SUCCESS)
+      {
+        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse OK\r\n", sizeof("\r\nParse OK\r\n") -1, 1000);
+        
+        osStatus_t status = osMessageQueuePut(commandQueue, &cmd, 0, 0);
+
+        HAL_StatusTypeDef retVal;
+        if(status == osOK)
+        {
+        	retVal = HAL_UART_Transmit(&huart2, (uint8_t *)"input OK\r\n", strlen("input OK\r\n"), 1000);
+        }
+        else
+        {
+        	retVal = HAL_UART_Transmit(&huart2, (uint8_t *)"input X\r\n", strlen("input X\r\n"), 1000);
+        }
+      }
+      else
+      { 
+    	  HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse Fail\r\n", sizeof("\r\nParse Fail\r\n") -1, 1000);
+      }
       index = 0;
     }
     else 
@@ -428,6 +446,71 @@ void receiveMessage(void *argument)
   }
 }
 
+
+void changeState(void *argument)
+{
+  Command cmd;
+  State current_state = STATE_STOP;
+  
+  /* LOG */
+    static const char * state_str[] = {
+      "STATE_STOP",
+      "STATE_RUNNING",
+      "STATE_ERROR",
+      "STATE_RECOVERY"
+    };
+
+  /* LOG */
+    static const char * motor_str[] = {
+      "MOTOR_OFF",
+      "MOTOR_ON"
+    };
+
+  /* LOG */
+    static const char * direction_str[] = {
+      "FORWARD",
+      "BACKWARD"
+    };
+
+  /* LOG */
+    char pwm_str[20];
+
+  
+  for(;;)
+  {
+    osStatus_t status = osMessageQueueGet(commandQueue, &cmd, NULL, osWaitForever);
+    if (status == osOK)
+    {
+      switch (cmd.type)
+      {
+      case CMD_MOVE:
+        current_state = getNextState(current_state, EVENT_RUN);
+        updateActuator(current_state, cmd);
+        break;
+
+      case CMD_STOP:
+        current_state = getNextState(current_state, EVENT_STOP);
+        updateActuator(current_state, cmd);
+        break;
+      }
+
+      /*LOG*/
+      HAL_StatusTypeDef retVal;
+      retVal = HAL_UART_Transmit(&huart2, (uint8_t *)"[controlTask LOG]\r\n", strlen("[controlTask LOG]\r\n"),1000);
+
+      HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
+      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+
+      snprintf(pwm_str, sizeof(pwm_str), "%d", actuator.pwm);
+      HAL_UART_Transmit(&huart2, (uint8_t *)pwm_str, strlen(pwm_str),1000);
+      HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
+      HAL_UART_Transmit(&huart2, (uint8_t *)motor_str[actuator.motor], strlen(motor_str[actuator.motor]),1000);
+      HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
+      HAL_UART_Transmit(&huart2, (uint8_t *)direction_str[actuator.direction], strlen(direction_str[actuator.direction]),1000);
+      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"), 1000);
+    }
+  }
+}
 
 /* USER CODE END 4 */
 
