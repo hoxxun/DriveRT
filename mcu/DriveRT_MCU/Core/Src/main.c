@@ -61,6 +61,7 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* USER CODE BEGIN PV */
 
+osMutexId_t uartTxMutex;
 osMessageQueueId_t commandQueue;
 
 /* USER CODE END PV */
@@ -99,7 +100,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -117,43 +118,15 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-    uint8_t rx_buf[1];
-    char str_buf[20];
-    int index = 0;
-
-    Command cmd;
-    State current_state = STATE_STOP;
-
-    /* LOG */
-    static const char * state_str[] = {
-      "STATE_STOP",
-      "STATE_RUNNING",
-      "STATE_ERROR",
-      "STATE_RECOVERY"
-    };
-
-    /* LOG */
-    static const char * motor_str[] = {
-      "MOTOR_OFF",
-      "MOTOR_ON"
-    };
-
-    /* LOG */
-    static const char * direction_str[] = {
-      "FORWARD",
-      "BACKWARD"
-    };
-
-    /* LOG */
-    char pwm_str[20];
-
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+  
+  uartTxMutex = osMutexNew(NULL);
+
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -195,77 +168,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
-/*     
-      HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-	    HAL_Delay(500);
-	    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-	    HAL_Delay(500);
- */
-
-    //문자를 하나 받는다. Enter면 문자열을 끝내고 송신한다. Enter가 아니면서 공간이 있으면 저장한다. 공간이 없으면 버린다.
-    HAL_UART_Receive(&huart2, rx_buf, sizeof(rx_buf), HAL_MAX_DELAY);
-
-    if(rx_buf[0] == '\r')
-    {
-      str_buf[index] = '\0';
-      HAL_UART_Transmit(&huart2,(uint8_t *) str_buf, index, 1000);
-      int result = parseCommandMessage(str_buf, &cmd);
-
-      if(result == SUCCESS)
-      {
-        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse OK ", sizeof("\r\nParse OK ") -1, 1000);
-
-        switch (cmd.type)
-        {
-        case CMD_MOVE:
-          current_state = getNextState(current_state, EVENT_RUN);
-          updateActuator(current_state, cmd);
-          break;
-
-        case CMD_STOP:
-          current_state = getNextState(current_state, EVENT_STOP);
-          updateActuator(current_state, cmd);
-          break;
-        }
-
-         /*LOG*/
-          HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
-
-          snprintf(pwm_str, sizeof(pwm_str), "%d", actuator.pwm);
-          HAL_UART_Transmit(&huart2, (uint8_t *)pwm_str, strlen(pwm_str),1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)motor_str[actuator.motor], strlen(motor_str[actuator.motor]),1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)direction_str[actuator.direction], strlen(direction_str[actuator.direction]),1000);
-          HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"), 1000);
-
-
-      }
-      else
-      { 
-        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse Fail\r\n", sizeof("\r\nParse Fail\r\n") -1, 1000);
-      }
-
-      index = 0;
-    }
-
-    else 
-    {
-      if(index < sizeof(str_buf)-1)
-      {
-        str_buf[index] = rx_buf[0];
-        index++;
-      }
-      else
-      {
-        //버퍼 full : 현재 수신 문자를 저장하지 않음
-      }
-    }
   }
   /* USER CODE END 3 */
 }
@@ -409,39 +313,43 @@ void receiveMessage(void *argument)
       HAL_UART_Transmit(&huart2,(uint8_t *) str_buf, index, 1000);
       int result = parseCommandMessage(str_buf, &cmd);
 
-      if(result == SUCCESS)
+      if(osMutexAcquire(uartTxMutex, osWaitForever) == osOK)
       {
-        HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse OK\r\n", sizeof("\r\nParse OK\r\n") -1, 1000);
-        
-        osStatus_t status = osMessageQueuePut(commandQueue, &cmd, 0, 0);
-
-        HAL_StatusTypeDef retVal;
-        if(status == osOK)
+        if(result == SUCCESS)
         {
-        	retVal = HAL_UART_Transmit(&huart2, (uint8_t *)"input OK\r\n", strlen("input OK\r\n"), 1000);
-        }
+            HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse OK\r\n", sizeof("\r\nParse OK\r\n") -1, 1000);
+            
+            osStatus_t status = osMessageQueuePut(commandQueue, &cmd, 0, 0);
+            
+            if(status == osOK)
+            {
+                HAL_UART_Transmit(&huart2, (uint8_t *)"input OK\r\n", strlen("input OK\r\n"), 1000);
+            }
+            else
+            {
+                HAL_UART_Transmit(&huart2, (uint8_t *)"input X\r\n", strlen("input X\r\n"), 1000);
+            }
+         }
         else
-        {
-        	retVal = HAL_UART_Transmit(&huart2, (uint8_t *)"input X\r\n", strlen("input X\r\n"), 1000);
+        { 
+            HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse Fail\r\n", sizeof("\r\nParse Fail\r\n") -1, 1000);
         }
+        index = 0;
+
+        osMutexRelease(uartTxMutex);
       }
-      else
-      { 
-    	  HAL_UART_Transmit(&huart2, (uint8_t *)"\r\nParse Fail\r\n", sizeof("\r\nParse Fail\r\n") -1, 1000);
-      }
-      index = 0;
     }
     else 
     {
-      if(index < sizeof(str_buf)-1)
-      {
-        str_buf[index] = rx_buf[0];
-        index++;
-      }
-      else
-      {
-        //버퍼 full : 현재 수신 문자를 저장하지 않음
-      }
+        if(index < sizeof(str_buf)-1)
+        {
+            str_buf[index] = rx_buf[0];
+            index++;
+          }
+        else
+        {
+            //버퍼 full : 현재 수신 문자를 저장하지 않음
+        }
     }
   }
 }
@@ -449,67 +357,71 @@ void receiveMessage(void *argument)
 
 void changeState(void *argument)
 {
-  Command cmd;
-  State current_state = STATE_STOP;
-  
-  /* LOG */
-    static const char * state_str[] = {
-      "STATE_STOP",
-      "STATE_RUNNING",
-      "STATE_ERROR",
-      "STATE_RECOVERY"
-    };
+    Command cmd;
+    State current_state = STATE_STOP;
+    
+    /* LOG */
+      static const char * state_str[] = {
+        "STATE_STOP",
+        "STATE_RUNNING",
+        "STATE_ERROR",
+        "STATE_RECOVERY"
+      };
 
-  /* LOG */
-    static const char * motor_str[] = {
-      "MOTOR_OFF",
-      "MOTOR_ON"
-    };
+    /* LOG */
+      static const char * motor_str[] = {
+        "MOTOR_OFF",
+        "MOTOR_ON"
+      };
 
-  /* LOG */
-    static const char * direction_str[] = {
-      "FORWARD",
-      "BACKWARD"
-    };
+    /* LOG */
+      static const char * direction_str[] = {
+        "FORWARD",
+        "BACKWARD"
+      };
 
-  /* LOG */
-    char pwm_str[20];
+    /* LOG */
+      char pwm_str[20];
 
-  
-  for(;;)
-  {
-    osStatus_t status = osMessageQueueGet(commandQueue, &cmd, NULL, osWaitForever);
-    if (status == osOK)
+    
+    for(;;)
     {
-      switch (cmd.type)
-      {
-      case CMD_MOVE:
-        current_state = getNextState(current_state, EVENT_RUN);
-        updateActuator(current_state, cmd);
-        break;
+        osStatus_t status = osMessageQueueGet(commandQueue, &cmd, NULL, osWaitForever);
+        if (status == osOK)
+        {
+            if(osMutexAcquire(uartTxMutex, osWaitForever) == osOK)
+            {
+                switch (cmd.type)
+                {
+                case CMD_MOVE:
+                    current_state = getNextState(current_state, EVENT_RUN);
+                    updateActuator(current_state, cmd);
+                    break;
 
-      case CMD_STOP:
-        current_state = getNextState(current_state, EVENT_STOP);
-        updateActuator(current_state, cmd);
-        break;
-      }
+                case CMD_STOP:
+                    current_state = getNextState(current_state, EVENT_STOP);
+                    updateActuator(current_state, cmd);
+                    break;
+                }
+            
+                /*LOG*/
+                HAL_UART_Transmit(&huart2, (uint8_t *)"[controlTask LOG]\r\n", strlen("[controlTask LOG]\r\n"),1000);
 
-      /*LOG*/
-      HAL_StatusTypeDef retVal;
-      retVal = HAL_UART_Transmit(&huart2, (uint8_t *)"[controlTask LOG]\r\n", strlen("[controlTask LOG]\r\n"),1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
 
-      HAL_UART_Transmit(&huart2, (uint8_t *)state_str[current_state], strlen(state_str[current_state]), 1000);
-      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"),1000);
+                snprintf(pwm_str, sizeof(pwm_str), "%d", actuator.pwm);
+                HAL_UART_Transmit(&huart2, (uint8_t *)pwm_str, strlen(pwm_str),1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)motor_str[actuator.motor], strlen(motor_str[actuator.motor]),1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)direction_str[actuator.direction], strlen(direction_str[actuator.direction]),1000);
+                HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n\n", strlen("\r\n\n"), 1000);
 
-      snprintf(pwm_str, sizeof(pwm_str), "%d", actuator.pwm);
-      HAL_UART_Transmit(&huart2, (uint8_t *)pwm_str, strlen(pwm_str),1000);
-      HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
-      HAL_UART_Transmit(&huart2, (uint8_t *)motor_str[actuator.motor], strlen(motor_str[actuator.motor]),1000);
-      HAL_UART_Transmit(&huart2, (uint8_t *)" ", 1, 1000);
-      HAL_UART_Transmit(&huart2, (uint8_t *)direction_str[actuator.direction], strlen(direction_str[actuator.direction]),1000);
-      HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", strlen("\r\n"), 1000);
+                osMutexRelease(uartTxMutex);
+            }
+        }
     }
-  }
 }
 
 /* USER CODE END 4 */
