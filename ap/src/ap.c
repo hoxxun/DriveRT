@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <string.h>
+#include <windows.h>
 
 /* Command */
 #include "../../common/include/command.h"
 
 //PC에 남길 것
 
-void send_commandMessage();
 int send_heartbeat();
 
 static const char * commandType_str[] = {
@@ -18,6 +18,53 @@ static const char * direction_str[] = {
     "FORWARD",
     "BACKWARD"
 };
+
+void sendMessage(char * message)
+{
+    HANDLE messageHandler =  CreateFileA("COM3", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    if(messageHandler == INVALID_HANDLE_VALUE)
+    {
+        printf("[AP LOG] 포트 연결 실패\n");
+        return;
+    }
+
+    DCB config = {0};
+    config.DCBlength = sizeof(config);
+
+    if (GetCommState(messageHandler, &config) == 0)
+    {
+        printf("[AP LOG] 설정 정보 가져오기 실패\n");
+        CloseHandle(messageHandler);
+        return;
+    }
+
+    config.BaudRate = CBR_115200;
+    config.ByteSize = 8;
+    config.Parity = NOPARITY;
+    config.StopBits = ONESTOPBIT;
+
+    config.fOutxCtsFlow = FALSE;
+    config.fOutxDsrFlow = FALSE;
+    config.fOutX = FALSE;
+    config.fInX = FALSE;
+
+    if (SetCommState(messageHandler, &config) == 0)
+    {
+        printf("[AP LOG] 설정 정보 업데이트 실패\n");
+        CloseHandle(messageHandler);
+        return;
+    }
+
+    DWORD bytesWritten = 0;
+    BOOL result = WriteFile(messageHandler, message, (DWORD)strlen(message), &bytesWritten, NULL);
+
+    if ((result != 0) && (bytesWritten == (DWORD)strlen(message)))
+    {
+        WriteFile(messageHandler, "\r", 1, &bytesWritten, NULL);
+    }
+
+    CloseHandle(messageHandler);
+}
 
 int commandInput(Command * cmd)
 {
