@@ -51,20 +51,24 @@ int initSerialPort(void)
     return fd;
 }
 
-void sendMessage(HANDLE handler, char * message)
+void sendMessage(int fd, char * message)
 {
-    DWORD bytesWritten = 0;
-    BOOL result = WriteFile(handler, message, (DWORD)strlen(message), &bytesWritten, NULL);
-
-    if ((result != 0) && (bytesWritten == (DWORD)strlen(message)))
+    if(write(fd, message, strlen(message)) != strlen(message))
     {
-        WriteFile(handler, "\r", 1, &bytesWritten, NULL);
+        printf("[AP LOG] 송신 실패\n");
+        return;
+    }
+
+    if(write(fd, "\r", 1) != 1)
+    {
+        printf("[AP LOG] 송신 실패");
+        return;
     }
 }
 
-void sendHeartbeat(HANDLE handler)
+void sendHeartbeat(int fd)
 {
-    sendMessage(handler, "HEARTBEAT");   
+    sendMessage(fd, "HEARTBEAT");   
 }
 /*
 
