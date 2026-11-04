@@ -1,13 +1,72 @@
 #include <stdio.h>
 #include <string.h>
-#include <windows.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
 
-/* Command */
-#include "../../common/include/command.h"
-
-//PC에 남길 것
+/*
+ttyACM0
+*/
 
 int send_heartbeat();
+
+int initSerialPort(void)
+{
+    int fd = open("/dev/ttyACM0", O_RDWR | O_NOCTTY);
+    if(fd < 0)
+    {
+        printf("[AP LOG] STM32 통신 시리얼 장치 연결 실패\n");
+        return -1;
+    }
+
+    struct termios config;
+    if(tcgetattr(fd, &config) < 0)
+    {
+        printf("[AP LOG] STM32 통신 시리얼 장치 설정 정보 가져오기 실패\n");
+        close(fd);
+        return -1;
+    }
+
+    cfsetispeed(&config, B115200);
+    cfsetospeed(&config, B115200);
+
+    config.c_cflag &= ~CSIZE;   // 기존 데이터 비트 수 설정 지우기
+    config.c_cflag |= CS8;      // 데이터 8비트 설정
+    config.c_cflag &= ~PARENB;  // 패리티 사용 안 함
+    config.c_cflag &= ~CSTOPB;  // 정지 비트 1개 사용
+
+    config.c_cflag |= (CREAD | CLOCAL);
+    config.c_cflag &= ~CRTSCTS;
+    config.c_iflag &= ~(IXON | IXOFF | IXANY);
+
+    cfmakeraw(&config);
+
+    if(tcsetattr(fd, TCSANOW, &config) < 0)
+    {
+        printf("[AP LOG] STM32 통신 시리얼 장치 설정 정보 업데이트 실패\n");
+        close(fd);
+        return -1;
+    }
+
+    return fd;
+}
+
+void sendMessage(HANDLE handler, char * message)
+{
+    DWORD bytesWritten = 0;
+    BOOL result = WriteFile(handler, message, (DWORD)strlen(message), &bytesWritten, NULL);
+
+    if ((result != 0) && (bytesWritten == (DWORD)strlen(message)))
+    {
+        WriteFile(handler, "\r", 1, &bytesWritten, NULL);
+    }
+}
+
+void sendHeartbeat(HANDLE handler)
+{
+    sendMessage(handler, "HEARTBEAT");   
+}
+/*
 
 static const char * commandType_str[] = {
     "MOVE",
@@ -19,52 +78,6 @@ static const char * direction_str[] = {
     "BACKWARD"
 };
 
-void sendMessage(char * message)
-{
-    HANDLE messageHandler =  CreateFileA("COM3", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-    if(messageHandler == INVALID_HANDLE_VALUE)
-    {
-        printf("[AP LOG] 포트 연결 실패\n");
-        return;
-    }
-
-    DCB config = {0};
-    config.DCBlength = sizeof(config);
-
-    if (GetCommState(messageHandler, &config) == 0)
-    {
-        printf("[AP LOG] 설정 정보 가져오기 실패\n");
-        CloseHandle(messageHandler);
-        return;
-    }
-
-    config.BaudRate = CBR_115200;
-    config.ByteSize = 8;
-    config.Parity = NOPARITY;
-    config.StopBits = ONESTOPBIT;
-
-    config.fOutxCtsFlow = FALSE;
-    config.fOutxDsrFlow = FALSE;
-    config.fOutX = FALSE;
-    config.fInX = FALSE;
-
-    if (SetCommState(messageHandler, &config) == 0)
-    {
-        printf("[AP LOG] 설정 정보 업데이트 실패\n");
-        CloseHandle(messageHandler);
-        return;
-    }
-
-    DWORD bytesWritten = 0;
-    BOOL result = WriteFile(messageHandler, message, (DWORD)strlen(message), &bytesWritten, NULL);
-
-    if ((result != 0) && (bytesWritten == (DWORD)strlen(message)))
-    {
-        WriteFile(messageHandler, "\r", 1, &bytesWritten, NULL);
-    }
-
-    CloseHandle(messageHandler);
-}
 
 int commandInput(Command * cmd)
 {
@@ -138,3 +151,5 @@ void buildCommandMessage(Command cmd, char * buf)
                 commandType_str[cmd.type]);
     }
 }
+
+*/
