@@ -3,12 +3,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
+#include <pthread.h>
 
 /*
 ttyACM0
 */
 
-int send_heartbeat();
+pthread_mutex_t uartTxMutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 int initSerialPort(void)
 {
@@ -53,17 +55,23 @@ int initSerialPort(void)
 
 void sendMessage(int fd, char * message)
 {
+    pthread_mutex_lock(&uartTxMutex);
+
     if(write(fd, message, strlen(message)) != strlen(message))
     {
         printf("[AP LOG] 송신 실패\n");
+        pthread_mutex_unlock(&uartTxMutex);
         return;
     }
 
     if(write(fd, "\r", 1) != 1)
     {
-        printf("[AP LOG] 송신 실패");
+        printf("[AP LOG] 송신 실패\n");
+        pthread_mutex_unlock(&uartTxMutex);
         return;
     }
+
+    pthread_mutex_unlock(&uartTxMutex);
 }
 
 void sendHeartbeat(int fd)

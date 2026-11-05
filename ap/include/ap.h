@@ -3,9 +3,13 @@
 #ifndef AP_H
 #define AP_H
 
-#include "../../common/include/command.h"
+int initSerialPort(void);
+void sendMessage(int fd, char * message);
+void sendHeartbeat(int fd);
 
+/*
 int commandInput(Command * cmd);
 void buildCommandMessage(Command cmd, char * buf);
+*/
 
 #endif
